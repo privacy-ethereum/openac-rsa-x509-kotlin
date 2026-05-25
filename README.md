@@ -2,7 +2,7 @@
 
 # OpenACKotlin
 
-A Kotlin/Android library for generating and verifying zero-knowledge proofs for two RS circuits (`cert_chain_rs4096` and `device_sig_rs2048`) using native Rust code via UniFFI and JNI.
+A Kotlin/Android library for generating and verifying zero-knowledge proofs for two RS circuits (`cert_chain_rs4096` and `user_sig_rs2048`) using native Rust code via UniFFI and JNI.
 
 ## Getting OpenACKotlin via JitPack
 
@@ -42,7 +42,7 @@ Checkout the [JitPack page](https://jitpack.io/#zkmopro/OpenACKotlin) for more a
 
 All functions are in the `uniffi.mopro` package. The library supports two circuits:
 - **`cert_chain_rs4096`** — Certificate chain verification
-- **`device_sig_rs2048`** — Device signature verification
+- **`user_sig_rs2048`** — User signature verification
 
 ### Import the package
 
@@ -50,9 +50,9 @@ All functions are in the `uniffi.mopro` package. The library supports two circui
 import uniffi.mopro.generateCertChainRs4096Input
 import uniffi.mopro.setupKeys
 import uniffi.mopro.proveCertChainRs4096
-import uniffi.mopro.proveDeviceSigRs2048
+import uniffi.mopro.proveUserSigRs2048
 import uniffi.mopro.verifyCertChainRs4096
-import uniffi.mopro.verifyDeviceSigRs2048
+import uniffi.mopro.verifyUserSigRs2048
 import uniffi.mopro.linkVerify
 import uniffi.mopro.runCompleteBenchmark
 import uniffi.mopro.BenchmarkResults
@@ -78,7 +78,7 @@ val status: String = generateCertChainRs4096Input(
 
 Writes two files to `outputDir`:
 - `cert_chain_rs4096_input.json`
-- `device_sig_rs2048_input.json`
+- `user_sig_rs2048_input.json`
 
 Returns a status string on success. Throws `ZkProofException` on failure.
 
@@ -136,7 +136,7 @@ This downloads everything into `lib/src/androidTest/assets/TestVectors/`.
 
 ### `setupKeys`
 
-Alternatively, generate keys locally from R1CS files. Requires `cert_chain_rs4096.r1cs` and `device_sig_rs2048.r1cs` to be present in `documentsPath`. This is slow and only needed if you cannot use the pre-built keys above.
+Alternatively, generate keys locally from R1CS files. Requires `cert_chain_rs4096.r1cs` and `user_sig_rs2048.r1cs` to be present in `documentsPath`. This is slow and only needed if you cannot use the pre-built keys above.
 
 ```kotlin
 val documentsPath: String = context.filesDir.absolutePath
@@ -156,12 +156,12 @@ println("Prove time: ${result.proveMs} ms")
 println("Proof size: ${result.proofSizeBytes} bytes")
 ```
 
-### `proveDeviceSigRs2048`
+### `proveUserSigRs2048`
 
-Generates ZK proofs for both the `cert_chain_rs4096` and `device_sig_rs2048` circuits. Reads both input JSON files from `documentsPath`.
+Generates ZK proofs for both the `cert_chain_rs4096` and `user_sig_rs2048` circuits. Reads both input JSON files from `documentsPath`.
 
 ```kotlin
-val result: ProofResult = proveDeviceSigRs2048(documentsPath)
+val result: ProofResult = proveUserSigRs2048(documentsPath)
 println("Prove time: ${result.proveMs} ms")
 println("Proof size: ${result.proofSizeBytes} bytes")
 ```
@@ -183,12 +183,12 @@ Verifies the proof for the `cert_chain_rs4096` circuit stored in `documentsPath`
 val isValid: Boolean = verifyCertChainRs4096(documentsPath)
 ```
 
-### `verifyDeviceSigRs2048`
+### `verifyUserSigRs2048`
 
-Verifies the proof for the `device_sig_rs2048` circuit stored in `documentsPath`.
+Verifies the proof for the `user_sig_rs2048` circuit stored in `documentsPath`.
 
 ```kotlin
-val isValid: Boolean = verifyDeviceSigRs2048(documentsPath)
+val isValid: Boolean = verifyUserSigRs2048(documentsPath)
 ```
 
 ### `linkVerify`
@@ -277,8 +277,8 @@ downloadKeys(documentsPath)
 val certProof = proveCertChainRs4096(documentsPath)
 println("cert_chain proved in ${certProof.proveMs} ms")
 
-val deviceProof = proveDeviceSigRs2048(documentsPath)
-println("device_sig proved in ${deviceProof.proveMs} ms")
+val userProof = proveUserSigRs2048(documentsPath)
+println("user_sig proved in ${userProof.proveMs} ms")
 
 // 4. Verify proofs
 val valid = linkVerify(documentsPath)
