@@ -126,6 +126,14 @@ suspend fun downloadKeys(documentsPath: String) {
 }
 ```
 
+You can also download all required files (R1CS, keys, and SMT snapshot) at once using the provided script:
+
+```sh
+bash scripts/download-test-vectors.sh
+```
+
+This downloads everything into `lib/src/androidTest/assets/TestVectors/`.
+
 ### `setupKeys`
 
 Alternatively, generate keys locally from R1CS files. Requires `cert_chain_rs4096.r1cs` and `device_sig_rs2048.r1cs` to be present in `documentsPath`. This is slow and only needed if you cannot use the pre-built keys above.
