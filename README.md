@@ -134,9 +134,9 @@ bash scripts/download-test-vectors.sh
 
 This downloads everything into `lib/src/androidTest/assets/TestVectors/`.
 
-### `setupKeys`
+### `setupKeys` (optional)
 
-Alternatively, generate keys locally from R1CS files. Requires `cert_chain_rs4096.r1cs` and `user_sig_rs2048.r1cs` to be present in `documentsPath`. This is slow and only needed if you cannot use the pre-built keys above.
+Alternatively, generate keys locally from R1CS files. **This step is optional** — skip it if you already have the proving and verifying key files in place (e.g. downloaded via the section above). Requires `cert_chain_rs4096.r1cs` and `user_sig_rs2048.r1cs` to be present in `documentsPath`. This is slow and only needed if you cannot use the pre-built keys above.
 
 ```kotlin
 val documentsPath: String = context.filesDir.absolutePath
@@ -250,6 +250,11 @@ try {
     println("ZK error: ${e.message}")
 }
 ```
+
+## Example App
+
+A complete Android example app using this library is available at:
+[https://github.com/privacy-ethereum/OpenACAndroidExample](https://github.com/privacy-ethereum/OpenACAndroidExample)
 
 ## Usage Example
 
