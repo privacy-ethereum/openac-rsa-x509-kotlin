@@ -47,7 +47,7 @@ Checkout the [JitPack page](https://jitpack.io/#privacy-ethereum/openac-rsa-x509
 
 ## Example App
 
-A complete example app is available at [privacy-ethereum/OpenACAndroidExample](https://github.com/privacy-ethereum/OpenACAndroidExample).
+A complete example app is available at [privacy-ethereum/openac-taiwan-citizen-digital-certificate-android-example](https://github.com/privacy-ethereum/openac-taiwan-citizen-digital-certificate-android-example).
 
 ## Usage
 
@@ -77,7 +77,7 @@ Before calling `setupKeys`, download the required files and place them in `docum
 **R1CS files** (directly in `documentsPath/`):
 
 | File                   | Download URL                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `certChainRS4096.r1cs` | [certChainRS4096.r1cs.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/certChainRS2048.r1cs.gz) |
 | `userSigRS2048.r1cs`   | [userSigRS2048.r1cs.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/userSigRS2048.r1cs.gz)     |
 
@@ -266,16 +266,16 @@ suspend fun runZKProof(context: Context) {
 
 ## API Reference
 
-| Function                                                                                                       | Returns             | Description                                       |
-| ---------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
-| `setupKeys(documentsPath)`                                                                                       | `String`            | Generate keys for both circuits                   |
-| `proveCertChainRs4096(documentsPath)`                                                                            | `ProofResult`       | Prove cert chain (RS4096) circuit                 |
-| `proveUserSigRs2048(documentsPath)`                                                                               | `ProofResult`       | Prove user signature (RS2048) circuit             |
-| `verifyCertChainRs4096(documentsPath)`                                                                           | `Boolean`           | Verify cert chain proof                           |
-| `verifyUserSigRs2048(documentsPath)`                                                                             | `Boolean`           | Verify user signature proof                       |
-| `linkVerify(documentsPath)`                                                                                       | `Boolean`           | Verify both proofs together                       |
-| `generateCertChainRs4096Input(certb64, signedResponse, tbs, issuerCertPath, smtSnapshotPath, outputDir, challenge)` | `String`            | Generate circuit input JSONs from credential data |
-| `runCompleteBenchmark(documentsPath)`                                                                             | `BenchmarkResults`  | Run full pipeline and return timing/size stats    |
+| Function                                                                                                            | Returns            | Description                                       |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------------- |
+| `setupKeys(documentsPath)`                                                                                          | `String`           | Generate keys for both circuits                   |
+| `proveCertChainRs4096(documentsPath)`                                                                               | `ProofResult`      | Prove cert chain (RS4096) circuit                 |
+| `proveUserSigRs2048(documentsPath)`                                                                                 | `ProofResult`      | Prove user signature (RS2048) circuit             |
+| `verifyCertChainRs4096(documentsPath)`                                                                              | `Boolean`          | Verify cert chain proof                           |
+| `verifyUserSigRs2048(documentsPath)`                                                                                | `Boolean`          | Verify user signature proof                       |
+| `linkVerify(documentsPath)`                                                                                         | `Boolean`          | Verify both proofs together                       |
+| `generateCertChainRs4096Input(certb64, signedResponse, tbs, issuerCertPath, smtSnapshotPath, outputDir, challenge)` | `String`           | Generate circuit input JSONs from credential data |
+| `runCompleteBenchmark(documentsPath)`                                                                               | `BenchmarkResults` | Run full pipeline and return timing/size stats    |
 
 ## Error Handling
 
@@ -292,32 +292,13 @@ All throwing functions throw `ZkProofException`:
 
 ## Development
 
-This package relies on bindings generated by the Mopro CLI. To learn how to build Mopro bindings, refer to the [Getting Started](https://zkmopro.org/docs/getting-started) section.
+The bindings are built and uploaded to the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest) by the [`build-android-bindings`](https://github.com/privacy-ethereum/zkID/blob/8e599a73f2a43d8c2ecc4b62f32614efd220cedd/.github/workflows/mobile-tests.yaml#L196) job in zkID's CI. This produces `MoproAndroidBindings/uniffi/mopro.kt` and the native `.so` libraries under `MoproAndroidBindings/jniLibs`.
 
-Use `mopro-cli` and choose the appropriate circuit:
-
-```sh
-mopro init
-mopro build
-```
-
-Choose `android` and build for `aarch64-linux-android` and `x86_64-linux-android` architectures.
-
-Then replace the bindings in:
-
-- `lib/src/main/java/uniffi`
-- `lib/src/main/jniLibs`
-
-Or copy them with:
+Download the bindings into this repo with:
 
 ```sh
-cp -r MoproAndroidBindings/uniffi lib/src/main/java
-cp -r MoproAndroidBindings/jniLibs lib/src/main
+./scripts/update_bindings.sh
 ```
 
-Download the test vectors and run the tests:
+which fetches the latest `MoproAndroidBindings.zip` release asset and copies `mopro.kt` and the `arm64-v8a` `.so` files into `lib/src/main/kotlin/uniffi/mopro` and `lib/src/main/jniLibs/arm64-v8a` respectively.
 
-```sh
-bash scripts/download-test-vectors.sh
-./gradlew :lib:connectedAndroidTest
-```
