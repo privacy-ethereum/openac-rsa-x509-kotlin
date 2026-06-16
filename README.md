@@ -1,12 +1,19 @@
 [![](https://jitpack.io/v/privacy-ethereum/openac-rsa-x509-kotlin.svg)](https://jitpack.io/#privacy-ethereum/openac-rsa-x509-kotlin)
 
-# openac-rsa-x509-kotlin
+# OpenAC RSA X.509 Certificate Kotlin Library
 
-A Kotlin/Android library for generating and verifying zero-knowledge proofs for two RS circuits (`cert_chain_rs4096` and `user_sig_rs2048`) using native Rust code via UniFFI and JNI.
+Kotlin/Android bindings for the OpenAC zero-knowledge proof system that proves and verifies **RSA-X.509-Cert** — wrapping the mobile bindings built from the [`RSA-X.509-Cert`](https://github.com/privacy-ethereum/zkID/tree/RSA-X.509-Cert) branch of [zkID](https://github.com/privacy-ethereum/zkID) to expose `setupKeys` / `prove*` / `verify*` and related circuit helpers (cert_chain_rs4096, user_sig_rs2048) for proof generation and verification on Android, via UniFFI and JNI.
 
-## Getting OpenACKotlin via JitPack
+The prebuilt binaries are distributed via the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest).
 
-To get this library from GitHub using [JitPack](https://jitpack.io/#privacy-ethereum/openac-rsa-x509-kotlin):
+## Requirements
+
+- Android API 24+
+- Android Studio / Gradle
+
+## Installation
+
+### JitPack
 
 **Step 1.** Add the JitPack repository to your `settings.gradle.kts` at the end of repositories:
 
@@ -30,100 +37,60 @@ dependencies {
 
 Checkout the [JitPack page](https://jitpack.io/#privacy-ethereum/openac-rsa-x509-kotlin) for more available versions.
 
-**Note:** If you're using an Android template from `mopro create`, comment out these UniFFI dependencies in your build file to prevent duplicate class errors.
+> **Note:** If you're using an Android template from `mopro create`, comment out these UniFFI dependencies in your build file to prevent duplicate class errors.
+>
+> ```kotlin
+> // // Uniffi
+> // implementation("net.java.dev.jna:jna:5.13.0@aar")
+> // implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+> ```
+
+## Example App
+
+A complete example app is available at [privacy-ethereum/OpenACAndroidExample](https://github.com/privacy-ethereum/OpenACAndroidExample).
+
+## Usage
+
+Import the package and call the functions in order: `setupKeys` (optional) → `prove*` → `verify*`.
 
 ```kotlin
-// // Uniffi
-// implementation("net.java.dev.jna:jna:5.13.0@aar")
-// implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+import uniffi.mopro.*
 ```
 
-## API Reference
+### 1. Setup Keys (Optional)
 
-All functions are in the `uniffi.mopro` package. The library supports two circuits:
-- **`cert_chain_rs4096`** — Certificate chain verification
-- **`user_sig_rs2048`** — User signature verification
-
-### Import the package
+Generates proving and verifying keys for both circuits. **Skip this step if you already have the proving and verifying key files** — place them directly in `documentsPath/keys/` and proceed to `prove*`. Only run `setupKeys` if the key files are not yet present.
 
 ```kotlin
-import uniffi.mopro.generateCertChainRs4096Input
-import uniffi.mopro.setupKeys
-import uniffi.mopro.proveCertChainRs4096
-import uniffi.mopro.proveUserSigRs2048
-import uniffi.mopro.verifyCertChainRs4096
-import uniffi.mopro.verifyUserSigRs2048
-import uniffi.mopro.runCompleteBenchmark
-import uniffi.mopro.BenchmarkResults
-import uniffi.mopro.ProofResult
-import uniffi.mopro.ZkProofException
-```
+val documentsPath: String = context.filesDir.absolutePath
 
-### `generateCertChainRs4096Input`
-
-Generates JSON input files for both circuits from raw certificate data.
-
-```kotlin
-val status: String = generateCertChainRs4096Input(
-    certb64 = "<base64-encoded certificate>",
-    signedResponse = "<signed response string>",
-    tbs = "<to-be-signed data>",
-    issuerCertPath = "/path/to/issuer.crt",
-    smtSnapshotPath = null,     // optional path to g3-tree-snapshot.json.gz; pass null to skip SMT revocation
-    outputDir = context.filesDir.absolutePath,
-    challenge = "<challenge-string>"
-)
-```
-
-Writes two files to `outputDir`:
-- `cert_chain_rs4096_input.json`
-- `user_sig_rs2048_input.json`
-
-Returns a status string on success. Throws `ZkProofException` on failure.
-
-### Downloading Pre-built Keys
-
-Instead of generating keys locally with `setupKeys`, you can download pre-built keys from the [zkID RSA-X.509-Cert latest release](https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest) and place them in `documentsPath/keys/`.
-
-Download and extract the following files:
-
-| File | Download URL |
-|---|---|
-| `cert_chain_rs4096_proving.key` | [`cert_chain_rs4096_proving.key.gz`](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/cert_chain_rs4096_proving.key.gz) |
-| `cert_chain_rs4096_verifying.key` | [`cert_chain_rs4096_verifying.key.gz`](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/cert_chain_rs4096_verifying.key.gz) |
-| `user_sig_rs2048_proving.key` | [`user_sig_rs2048_proving.key.gz`](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/user_sig_rs2048_proving.key.gz) |
-| `user_sig_rs2048_verifying.key` | [`user_sig_rs2048_verifying.key.gz`](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/user_sig_rs2048_verifying.key.gz) |
-
-After extracting, place all `.key` files into `documentsPath/keys/`. Example using `OkHttp` and `GZIPInputStream`:
-
-```kotlin
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.File
-import java.util.zip.GZIPInputStream
-
-suspend fun downloadKeys(documentsPath: String) {
-    val keysDir = File(documentsPath, "keys").also { it.mkdirs() }
-    val client = OkHttpClient()
-    val baseUrl = "https://github.com/privacy-ethereum/zkID/releases/tag/RSA-X.509-Cert-latest"
-
-    val files = listOf(
-        "cert_chain_rs4096_proving.key",
-        "cert_chain_rs4096_verifying.key",
-        "user_sig_rs2048_proving.key",
-        "user_sig_rs2048_verifying.key"
-    )
-
-    for (name in files) {
-        val dest = File(keysDir, name)
-        if (dest.exists()) continue
-        val response = client.newCall(Request.Builder().url("$baseUrl/$name.gz").build()).execute()
-        GZIPInputStream(response.body!!.byteStream()).use { input ->
-            dest.outputStream().use { output -> input.copyTo(output) }
-        }
-    }
+try {
+    val message = setupKeys(documentsPath)
+    println("Setup complete: $message")
+} catch (e: ZkProofException) {
+    println("Setup failed: $e")
 }
 ```
+
+Before calling `setupKeys`, download the required files and place them in `documentsPath`:
+
+**R1CS files** (directly in `documentsPath/`):
+
+| File                   | Download URL                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `certChainRS4096.r1cs` | [certChainRS4096.r1cs.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/certChainRS2048.r1cs.gz) |
+| `userSigRS2048.r1cs`   | [userSigRS2048.r1cs.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/userSigRS2048.r1cs.gz)     |
+
+**Key files** (in `documentsPath/keys/`):
+
+| File                              | Download URL                                                                                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cert_chain_rs4096_proving.key`   | [cert_chain_rs4096_proving.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/cert_chain_rs4096_proving.key.gz)     |
+| `cert_chain_rs4096_verifying.key` | [cert_chain_rs4096_verifying.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/cert_chain_rs4096_verifying.key.gz) |
+| `user_sig_rs2048_proving.key`     | [user_sig_rs2048_proving.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/user_sig_rs2048_proving.key.gz)         |
+| `user_sig_rs2048_verifying.key`   | [user_sig_rs2048_verifying.key.gz](https://github.com/privacy-ethereum/zkID/releases/download/RSA-X.509-Cert-latest/user_sig_rs2048_verifying.key.gz)     |
+
+The `.gz` key files must be decompressed before use (e.g. `gunzip *.gz`). The `.r1cs` files are also gzip-compressed — decompress them too.
 
 You can also download all required files (R1CS, keys, and SMT snapshot) at once using the provided script:
 
@@ -133,160 +100,199 @@ bash scripts/download-test-vectors.sh
 
 This downloads everything into `lib/src/androidTest/assets/TestVectors/`.
 
-### `setupKeys` (optional)
+**Parameters:**
 
-Alternatively, generate keys locally from R1CS files. **This step is optional** — skip it if you already have the proving and verifying key files in place (e.g. downloaded via the section above). Requires `cert_chain_rs4096.r1cs` and `user_sig_rs2048.r1cs` to be present in `documentsPath`. This is slow and only needed if you cannot use the pre-built keys above.
+- `documentsPath` — directory containing the `.r1cs` files and the `keys/` subdirectory
 
-```kotlin
-val documentsPath: String = context.filesDir.absolutePath
+**Returns:** a status string confirming completion.
 
-val result: String = setupKeys(documentsPath)
-```
+---
 
-Returns a status string on success. Throws `ZkProofException` on failure.
+### 2. Prove
 
-### `proveCertChainRs4096`
-
-Generates a ZK proof for the `cert_chain_rs4096` circuit. Reads `cert_chain_rs4096_input.json` from `documentsPath`.
+Generate a zero-knowledge proof for a specific circuit. Both functions return a `ProofResult`.
 
 ```kotlin
-val result: ProofResult = proveCertChainRs4096(documentsPath)
-println("Prove time: ${result.proveMs} ms")
-println("Proof size: ${result.proofSizeBytes} bytes")
+// Certificate chain circuit (RS4096)
+val certResult: ProofResult = proveCertChainRs4096(documentsPath)
+println("Proved in ${certResult.proveMs} ms, size: ${certResult.proofSizeBytes} bytes")
+
+// User signature circuit (RS2048)
+val userResult: ProofResult = proveUserSigRs2048(documentsPath)
+println("Proved in ${userResult.proveMs} ms, size: ${userResult.proofSizeBytes} bytes")
 ```
 
-### `proveUserSigRs2048`
+**Returns:** `ProofResult` with:
 
-Generates ZK proofs for both the `cert_chain_rs4096` and `user_sig_rs2048` circuits. Reads both input JSON files from `documentsPath`.
+- `proveMs: ULong` — time taken to generate the proof in milliseconds
+- `proofSizeBytes: ULong` — size of the generated proof in bytes
+
+---
+
+### 3. Verify
+
+Verify the proof produced by the corresponding prove function.
 
 ```kotlin
-val result: ProofResult = proveUserSigRs2048(documentsPath)
-println("Prove time: ${result.proveMs} ms")
-println("Proof size: ${result.proofSizeBytes} bytes")
+// Verify individually
+val certValid: Boolean = verifyCertChainRs4096(documentsPath)
+val userValid: Boolean = verifyUserSigRs2048(documentsPath)
+
+// Or verify both circuits together
+val linked: Boolean = linkVerify(documentsPath)
 ```
 
-**`ProofResult` fields:**
+**Returns:** `true` if the proof is valid, `false` otherwise.
 
-| Field | Type | Description |
-|---|---|---|
-| `proveMs` | `ULong` | Time to generate the proof in milliseconds |
-| `proofSizeBytes` | `ULong` | Size of the proof in bytes |
+---
 
-Both prove functions throw `ZkProofException.SetupRequired` if keys have not been set up yet.
+### Generate Circuit Input
 
-### `verifyCertChainRs4096`
+Use `generateCertChainRs4096Input` to produce JSON input files for both circuits from raw credential data.
 
-Verifies the proof for the `cert_chain_rs4096` circuit stored in `documentsPath`.
+> [!NOTE]
+> `signedResponse` (and the accompanying `cert`) comes from the Taiwan FIDO service. Authenticate via [https://fido.moi.gov.tw/pt/](https://fido.moi.gov.tw/pt/) to obtain a response shaped like:
+>
+> ```json
+> {
+>     "error_code": "0",
+>     "error_message": "SUCCESS",
+>     "result": {
+>         "hashed_id_num": "...",
+>         "signed_response": "...",
+>         "idp_checksum": "...",
+>         "cert": "..."
+>     }
+> }
+> ```
+>
+> Pass `result.signed_response` as `signedResponse` and `result.cert` (base64 DER) as `certb64`.
 
 ```kotlin
-val isValid: Boolean = verifyCertChainRs4096(documentsPath)
+val outputPath: String = generateCertChainRs4096Input(
+    certb64 = "<base64-encoded-cert>",
+    signedResponse = "<signed-response-json>",
+    tbs = "<tbs-data>",
+    issuerCertPath = "/path/to/issuer.cer",
+    smtSnapshotPath = "/path/to/g3-tree-snapshot.json.gz", // optional; pass null to skip SMT revocation
+    outputDir = documentsPath,
+    challenge = "<challenge-string>"
+)
+println("Input written to: $outputPath")
 ```
 
-### `verifyUserSigRs2048`
+This writes two files into `outputDir`:
 
-Verifies the proof for the `user_sig_rs2048` circuit stored in `documentsPath`.
+- `cert_chain_rs4096_input.json`
+- `user_sig_rs2048_input.json`
 
-```kotlin
-val isValid: Boolean = verifyUserSigRs2048(documentsPath)
-```
+**Parameters:**
 
-All verify functions return `true` if the proof is valid, `false` otherwise. Throws `ZkProofException` on error.
+- `smtSnapshotPath` — reserved for future revocation support; pass `null`
+- `challenge` — challenge string included in the circuit input
 
-### `runCompleteBenchmark`
+---
 
-Runs the full pipeline (setup → prove → verify) for both circuits and returns timing and size metrics.
+### Benchmarking
+
+Run the complete pipeline and get timing and size statistics for all stages:
 
 ```kotlin
 val results: BenchmarkResults = runCompleteBenchmark(documentsPath)
-println("Setup:    ${results.setupMs} ms")
-println("Prove:    ${results.proveMs} ms")
-println("Verify:   ${results.verifyMs} ms")
-println("Proving key:   ${results.provingKeyBytes} bytes")
+println("Setup: ${results.setupMs} ms")
+println("Prove: ${results.proveMs} ms")
+println("Verify: ${results.verifyMs} ms")
+println("Proving key: ${results.provingKeyBytes} bytes")
 println("Verifying key: ${results.verifyingKeyBytes} bytes")
-println("Proof:         ${results.proofBytes} bytes")
-println("Witness:       ${results.witnessBytes} bytes")
+println("Proof: ${results.proofBytes} bytes")
+println("Witness: ${results.witnessBytes} bytes")
 ```
 
-**`BenchmarkResults` fields:**
+---
 
-| Field | Type | Description |
-|---|---|---|
-| `setupMs` | `ULong` | Time for key setup in milliseconds |
-| `proveMs` | `ULong` | Time for proof generation in milliseconds |
-| `verifyMs` | `ULong` | Time for verification in milliseconds |
-| `provingKeyBytes` | `ULong` | Size of the proving key in bytes |
-| `verifyingKeyBytes` | `ULong` | Size of the verifying key in bytes |
-| `proofBytes` | `ULong` | Size of the proof in bytes |
-| `witnessBytes` | `ULong` | Size of the witness in bytes |
-
-### Error Handling
-
-All functions (except the verify functions) throw `ZkProofException` on failure. The sealed class variants are:
-
-| Variant | Description |
-|---|---|
-| `ZkProofException.FileNotFound` | A required file could not be found |
-| `ZkProofException.ProofGenerationFailed` | Proof generation encountered an error |
-| `ZkProofException.VerificationFailed` | Proof verification encountered an error |
-| `ZkProofException.InvalidInput` | The provided input is invalid |
-| `ZkProofException.SetupRequired` | Keys must be set up before proving |
-| `ZkProofException.IoException` | An I/O error occurred |
-
-```kotlin
-try {
-    val proof = proveCertChainRs4096(documentsPath)
-} catch (e: ZkProofException.SetupRequired) {
-    // Run setupKeys first
-} catch (e: ZkProofException) {
-    println("ZK error: ${e.message}")
-}
-```
-
-## Example App
-
-A complete Android example app using this library is available at:
-[https://github.com/privacy-ethereum/OpenACAndroidExample](https://github.com/privacy-ethereum/OpenACAndroidExample)
-
-## Usage Example
+### Full Example
 
 ```kotlin
 import uniffi.mopro.*
 
-val documentsPath = context.filesDir.absolutePath
+suspend fun runZKProof(context: Context) {
+    val documentsPath = context.filesDir.absolutePath
 
-// 1. Generate circuit inputs from certificate data
-generateCertChainRs4096Input(
-    certb64 = certBase64,
-    signedResponse = signedResponse,
-    tbs = tbs,
-    issuerCertPath = issuerCertPath,
-    smtSnapshotPath = null,
-    outputDir = documentsPath,
-    challenge = challenge
-)
+    try {
+        // 1. Generate keys (run once; skip if keys already exist)
+        val status = setupKeys(documentsPath)
+        println("Keys ready: $status")
 
-// 2. Download pre-built keys (only needed once)
-downloadKeys(documentsPath)
-// Or generate locally: setupKeys(documentsPath)
+        // 2. Generate circuit inputs (with optional SMT revocation)
+        val snapshotPath = "$documentsPath/g3-tree-snapshot.json.gz"
+        generateCertChainRs4096Input(
+            certb64 = "<base64-cert>",
+            signedResponse = "<signed-response-json>",
+            tbs = "<tbs>",
+            issuerCertPath = "$documentsPath/MOICA-G3.cer",
+            smtSnapshotPath = snapshotPath,
+            outputDir = documentsPath,
+            challenge = "<challenge-string>"
+        )
 
-// 3. Generate proofs
-val certProof = proveCertChainRs4096(documentsPath)
-println("cert_chain proved in ${certProof.proveMs} ms")
+        // 3. Generate proofs
+        val certProof = proveCertChainRs4096(documentsPath)
+        println("cert_chain proved in ${certProof.proveMs} ms (${certProof.proofSizeBytes} bytes)")
 
-val userProof = proveUserSigRs2048(documentsPath)
-println("user_sig proved in ${userProof.proveMs} ms")
+        val userProof = proveUserSigRs2048(documentsPath)
+        println("user_sig proved in ${userProof.proveMs} ms (${userProof.proofSizeBytes} bytes)")
 
-// 4. Verify proofs
-val certValid = verifyCertChainRs4096(documentsPath)
-val userValid = verifyUserSigRs2048(documentsPath)
-println("cert_chain valid: $certValid")
-println("user_sig valid: $userValid")
+        // 4. Verify proofs
+        val certValid = verifyCertChainRs4096(documentsPath)
+        val userValid = verifyUserSigRs2048(documentsPath)
+        val linked = linkVerify(documentsPath)
+        println("cert_chain valid: $certValid")
+        println("user_sig valid: $userValid")
+        println("link verify: $linked")
+    } catch (e: ZkProofException) {
+        when (e) {
+            is ZkProofException.SetupRequired -> println("Run setupKeys first: ${e.message}")
+            is ZkProofException.FileNotFound -> println("Missing file: ${e.message}")
+            is ZkProofException.InvalidInput -> println("Bad input: ${e.message}")
+            is ZkProofException.ProofGenerationFailed -> println("Prove error: ${e.message}")
+            is ZkProofException.VerificationFailed -> println("Verify error: ${e.message}")
+            is ZkProofException.IoException -> println("IO error: ${e.message}")
+        }
+    } catch (e: Exception) {
+        println("Unexpected error: $e")
+    }
+}
 ```
 
-## How to Build the Package
+## API Reference
 
-This package relies on bindings generated by the Mopro CLI.
-To learn how to build Mopro bindings, refer to the [Getting Started](https://zkmopro.org/docs/getting-started) section.
+| Function                                                                                                       | Returns             | Description                                       |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
+| `setupKeys(documentsPath)`                                                                                       | `String`            | Generate keys for both circuits                   |
+| `proveCertChainRs4096(documentsPath)`                                                                            | `ProofResult`       | Prove cert chain (RS4096) circuit                 |
+| `proveUserSigRs2048(documentsPath)`                                                                               | `ProofResult`       | Prove user signature (RS2048) circuit             |
+| `verifyCertChainRs4096(documentsPath)`                                                                           | `Boolean`           | Verify cert chain proof                           |
+| `verifyUserSigRs2048(documentsPath)`                                                                             | `Boolean`           | Verify user signature proof                       |
+| `linkVerify(documentsPath)`                                                                                       | `Boolean`           | Verify both proofs together                       |
+| `generateCertChainRs4096Input(certb64, signedResponse, tbs, issuerCertPath, smtSnapshotPath, outputDir, challenge)` | `String`            | Generate circuit input JSONs from credential data |
+| `runCompleteBenchmark(documentsPath)`                                                                             | `BenchmarkResults`  | Run full pipeline and return timing/size stats    |
+
+## Error Handling
+
+All throwing functions throw `ZkProofException`:
+
+| Case                    | Description                                            |
+| ----------------------- | ------------------------------------------------------ |
+| `SetupRequired`         | `prove*` or `verify*` called before `setupKeys`        |
+| `FileNotFound`          | A required file is missing from `documentsPath`        |
+| `InvalidInput`          | The input JSON is malformed or missing required fields |
+| `ProofGenerationFailed` | An error occurred during proof generation              |
+| `VerificationFailed`    | The proof failed verification                          |
+| `IoException`           | A filesystem read/write error occurred                 |
+
+## Development
+
+This package relies on bindings generated by the Mopro CLI. To learn how to build Mopro bindings, refer to the [Getting Started](https://zkmopro.org/docs/getting-started) section.
 
 Use `mopro-cli` and choose the appropriate circuit:
 
@@ -309,11 +315,9 @@ cp -r MoproAndroidBindings/uniffi lib/src/main/java
 cp -r MoproAndroidBindings/jniLibs lib/src/main
 ```
 
-## Community
+Download the test vectors and run the tests:
 
-- X account: <a href="https://twitter.com/zkmopro"><img src="https://img.shields.io/twitter/follow/zkmopro?style=flat-square&logo=x&label=zkmopro"></a>
-- Telegram group: <a href="https://t.me/zkmopro"><img src="https://img.shields.io/badge/telegram-@zkmopro-blue.svg?style=flat-square&logo=telegram"></a>
-
-## Acknowledgements
-
-This work was initially sponsored by a joint grant from [PSE](https://pse.dev/) and [0xPARC](https://0xparc.org/). It is currently incubated by PSE.
+```sh
+bash scripts/download-test-vectors.sh
+./gradlew :lib:connectedAndroidTest
+```
